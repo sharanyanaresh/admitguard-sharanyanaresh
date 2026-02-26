@@ -3,28 +3,37 @@
   <head>
     <base target="_top">
     <style>
-      body {
-        font-family: Arial, sans-serif;
-        padding: 12px;
-      }
-      h2 {
-        margin-top: 0;
-      }
-      button {
-        margin-top: 12px;
-        padding: 8px 12px;
-      }
+      body { font-family: Arial, sans-serif; padding: 12px; }
+      h2 { margin-top: 0; }
+      .error { color: #b00020; margin-bottom: 6px; }
+      .success { color: #0b7a0b; }
+      button { margin-top: 12px; padding: 8px 12px; }
     </style>
   </head>
   <body>
     <h2>AdmitGuard</h2>
-    <p>Candidate validation panel</p>
+    <p>Select a candidate row and validate strict rules.</p>
 
-    <button onclick="validate()">Validate Selected Row</button>
+    <button onclick="runValidation()">Validate Selected Row</button>
+
+    <div id="result"></div>
 
     <script>
-      function validate() {
-        alert('Validation logic will be added in Sprint 2');
+      function runValidation() {
+        document.getElementById('result').innerHTML = 'Checking...';
+        google.script.run.withSuccessHandler(showResult)
+          .validateSelectedRow();
+      }
+
+      function showResult(res) {
+        const el = document.getElementById('result');
+        if (res.ok) {
+          el.innerHTML = '<p class="success">All strict validations passed.</p>';
+        } else {
+          el.innerHTML = res.errors
+            .map(e => `<div class="error">• ${e}</div>`)
+            .join('');
+        }
       }
     </script>
   </body>
