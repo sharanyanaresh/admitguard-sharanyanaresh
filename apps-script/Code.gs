@@ -14,6 +14,7 @@ function openSidebar() {
 function validateSelectedRow() {
   const sheet = SpreadsheetApp.getActiveSheet();
   const range = sheet.getActiveRange();
+
   if (!range || range.getRow() === 1) {
     return { ok: false, errors: ['Please select a candidate row (not header).'] };
   }
@@ -22,8 +23,16 @@ function validateSelectedRow() {
   const values = sheet.getRange(row, 1, 1, 11).getValues()[0];
 
   const [
-    fullName, email, phone, dob, qualification,
-    gradYear, score, interviewStatus, aadhaar, offerSent
+    fullName,
+    email,
+    phone,
+    dob,
+    qualification,
+    gradYear,
+    score,
+    interviewStatus,
+    aadhaar,
+    offerSent
   ] = values;
 
   const errors = [];
@@ -44,7 +53,7 @@ function validateSelectedRow() {
   }
 
   // 4. Highest Qualification
-  const allowedQuals = ['B.Tech','B.E.','B.Sc','BCA','M.Tech','M.Sc','MCA','MBA'];
+  const allowedQuals = ['B.Tech', 'B.E.', 'B.Sc', 'BCA', 'M.Tech', 'M.Sc', 'MCA', 'MBA'];
   if (!allowedQuals.includes(String(qualification))) {
     errors.push('Highest Qualification must be one of the allowed values.');
   }
@@ -60,10 +69,62 @@ function validateSelectedRow() {
   }
 
   // 7. Offer Letter dependency
-  if (String(offerSent) === 'Yes' &&
-      !['Cleared','Waitlisted'].includes(String(interviewStatus))) {
-    errors.push('Offer Letter can be Yes only if Interview Status is Cleared or Waitlisted.');
+  if (
+    String(offerSent) === 'Yes' &&
+    !['Cleared', 'Waitlisted'].includes(String(interviewStatus))
+  ) {
+    errors.push(
+      'Offer Letter can be Yes only if Interview Status is Cleared or Waitlisted.'
+    );
   }
 
-  return errors.length ? { ok: false, errors } : { ok: true };
+  // STOP if any strict rule fails
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+
+  // Soft rules (exceptions allowed)
+  const warnings = validateSoftRules(values);
+
+  if (warnings.length > 0) {
+    return { ok: true, warnings };
+  }
+
+  // All checks passed
+  return { ok: true };
+}
+
+function validateSoftRules(rowValues) {
+  const warnings = [];
+
+  const dob = new Date(rowValues[3]);
+  const gradYear = Number(rowValues[5]);
+  const percentCgpa = Number(rowValues[6]);
+  const screeningScore = Number(rowValues[7]);
+
+  // Age check (18–35)
+  const age =
+    (new Date().getTime() - dob.getTime()) /
+    (365.25 * 24 * 60 * 60 * 1000);
+
+  if (age < 18 || age > 35) {
+    warnings.push('Age is outside the allowed range (18–35).');
+  }
+
+  // Graduation year
+  if (gradYear < 2015 || gradYear > 2025) {
+    warnings.push('Graduation year must be between 2015 and 2025.');
+  }
+
+  // Percentage / CGPA
+  if (percentCgpa < 6 && percentCgpa < 60) {
+    warnings.push('Percentage / CGPA is below the minimum threshold.');
+  }
+
+  // Screening score
+  if (screeningScore < 40) {
+    warnings.push('Screening test score is below 40.');
+  }
+
+  return warnings;
 }
